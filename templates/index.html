@@ -1,0 +1,255 @@
+
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Mosquito Image Classifier</title>
+
+    <style>
+        * {
+            box-sizing: border-box;
+        }
+
+        body {
+            margin: 0;
+            font-family: Arial, sans-serif;
+            background: #f1f5f9;
+            color: #172033;
+        }
+
+        .container {
+            width: 92%;
+            max-width: 760px;
+            margin: 45px auto;
+        }
+
+        .header {
+            text-align: center;
+            margin-bottom: 28px;
+        }
+
+        .header h1 {
+            color: #166534;
+            margin-bottom: 10px;
+        }
+
+        .header p {
+            color: #64748b;
+            line-height: 1.6;
+        }
+
+        .card {
+            background: white;
+            padding: 28px;
+            border-radius: 16px;
+            box-shadow: 0 8px 28px rgba(15, 23, 42, 0.08);
+            margin-bottom: 22px;
+        }
+
+        .upload-box {
+            border: 2px dashed #86b99a;
+            border-radius: 12px;
+            padding: 28px 18px;
+            text-align: center;
+            background: #f8fff9;
+        }
+
+        input[type="file"] {
+            display: block;
+            width: 100%;
+            margin: 18px 0;
+        }
+
+        button {
+            width: 100%;
+            border: none;
+            border-radius: 9px;
+            background: #15803d;
+            color: white;
+            padding: 14px;
+            font-size: 16px;
+            font-weight: bold;
+            cursor: pointer;
+        }
+
+        button:hover {
+            background: #166534;
+        }
+
+        .hint {
+            font-size: 13px;
+            color: #64748b;
+            margin-top: 12px;
+        }
+
+        .error {
+            background: #fef2f2;
+            color: #b91c1c;
+            border: 1px solid #fecaca;
+            padding: 14px;
+            border-radius: 9px;
+            margin-bottom: 18px;
+        }
+
+        .result {
+            border-left: 6px solid #15803d;
+        }
+
+        .result.not-mosquito {
+            border-left-color: #dc2626;
+        }
+
+        .result h2 {
+            margin-top: 0;
+            color: #166534;
+        }
+
+        .result.not-mosquito h2 {
+            color: #b91c1c;
+        }
+
+        .uploaded-image {
+            display: block;
+            max-width: 100%;
+            max-height: 350px;
+            object-fit: contain;
+            margin: 18px auto;
+            border-radius: 10px;
+            border: 1px solid #e2e8f0;
+        }
+
+        .confidence {
+            font-size: 18px;
+            font-weight: bold;
+            margin: 12px 0;
+        }
+
+        .probability {
+            margin: 16px 0;
+        }
+
+        .probability-title {
+            display: flex;
+            justify-content: space-between;
+            gap: 12px;
+            font-size: 14px;
+            margin-bottom: 7px;
+        }
+
+        .bar {
+            height: 12px;
+            background: #e2e8f0;
+            border-radius: 20px;
+            overflow: hidden;
+        }
+
+        .fill {
+            height: 100%;
+            background: #16a34a;
+            border-radius: 20px;
+        }
+
+        .note {
+            background: #fffbeb;
+            color: #92400e;
+            border: 1px solid #fde68a;
+            padding: 14px;
+            border-radius: 9px;
+            line-height: 1.6;
+            font-size: 13px;
+        }
+
+        .footer {
+            text-align: center;
+            color: #64748b;
+            font-size: 13px;
+            margin: 25px 0;
+        }
+    </style>
+</head>
+
+<body>
+    <div class="container">
+        <div class="header">
+            <h1>🦟 Mosquito Image Classifier</h1>
+            <p>
+                Upload a mosquito image to classify it as a dengue-vector
+                species, another mosquito species, or not a mosquito.
+            </p>
+        </div>
+
+        <div class="card">
+            {% if error %}
+                <div class="error">{{ error }}</div>
+            {% endif %}
+
+            <form method="POST" enctype="multipart/form-data">
+                <div class="upload-box">
+                    <h3>Upload Image</h3>
+                    <p>Select a clear JPG, PNG, BMP, or WEBP image.</p>
+                    <input
+                        type="file"
+                        name="image"
+                        accept=".jpg,.jpeg,.png,.bmp,.webp"
+                        required
+                    >
+                    <button type="submit">Classify Image</button>
+                    <div class="hint">Maximum file size: 8 MB</div>
+                </div>
+            </form>
+        </div>
+
+        {% if result %}
+        <div class="card result {% if result.kind == 'not-mosquito' %}not-mosquito{% endif %}">
+            <h2>{{ result.title }}</h2>
+            <p>{{ result.message }}</p>
+
+            {% if image_url %}
+                <img
+                    class="uploaded-image"
+                    src="{{ image_url }}"
+                    alt="Uploaded image"
+                >
+            {% endif %}
+
+            <div class="confidence">
+                Prediction confidence: {{ result.confidence }}%
+            </div>
+
+            {% if probabilities %}
+                <h3>Class probabilities</h3>
+
+                {% for item in probabilities %}
+                <div class="probability">
+                    <div class="probability-title">
+                        <span>{{ item.name }}</span>
+                        <strong>{{ item.confidence }}%</strong>
+                    </div>
+                    <div class="bar">
+                        <div
+                            class="fill"
+                            style="width: {{ item.confidence }}%;"
+                        ></div>
+                    </div>
+                </div>
+                {% endfor %}
+            {% endif %}
+        </div>
+        {% endif %}
+
+        <div class="note">
+            <strong>Important:</strong>
+            This model classifies mosquito species using its training
+            dataset. A dengue-vector species result does not mean that
+            the individual mosquito is infected with dengue virus.
+            Predictions may be incorrect, especially for unclear or
+            unfamiliar images.
+        </div>
+
+        <div class="footer">
+            Mosquito Image Classification Project
+        </div>
+    </div>
+</body>
+</html>
